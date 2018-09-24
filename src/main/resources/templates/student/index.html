@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>学生管理系统</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"
+	charset="utf-8" />
+
+<!-- jquery -->
+<script src="https://apps.bdimg.com/libs/jquery/2.1.4/jquery.min.js"></script>
+
+<!-- bootsrap -->
+<link
+	href="https://cdn.bootcss.com/bootstrap/3.3.7/css/bootstrap.min.css"
+	rel="stylesheet" />
+<script
+	src="https://cdn.bootcss.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+
+<!-- bootstrap-table -->
+<link
+	href="https://cdn.bootcss.com/bootstrap-table/1.11.1/bootstrap-table.min.css"
+	rel="stylesheet" />
+<script
+	src="https://cdn.bootcss.com/bootstrap-table/1.11.1/bootstrap-table.min.js"></script>
+<script
+	src="https://cdn.bootcss.com/bootstrap-table/1.11.1/locale/bootstrap-table-zh-CN.min.js"></script>
+
+<!--layer ui-->
+<script type="text/javascript" src="layer-v3.1.1/layer/layer.js"></script>
+
+<!-- <link rel="shortcut icon" href="icon/favicon.ico" />  -->
+
+<script>
+	$(function() {
+		var oTable = new TableInit();
+		oTable.Init();
+
+		//首页
+		$('#home').on('click', function() {
+			location.reload();
+		});
+
+		//添加
+		$('#add').on('click', function() {
+			layer.open({
+				type : 1,
+				skin : 'layui-layer-lan',
+				area : [ '600px', '360px' ],
+				shadeClose : true, //点击遮罩关闭
+				title : '添加学生记录',
+				content : $('#bidderDiv')
+			});
+
+			$('#id').val("");
+			$('#name').val("");
+			$('#sex').val("");
+			$('#age').val("");
+			$("#dilivery").off("click").on("click", function() {
+				var record = {
+					id : $('#id').val(),
+					name : $('#name').val(),
+					sex : $('#sex').val(),
+					age : $('#age').val()
+				}
+				$.ajax({
+					type : "POST",
+					url : "insertStudent",
+					datatype : "text",
+					contentType : "application/json",
+					data : JSON.stringify(record),
+					async : true,
+					success : function(result) {
+						layer.alert('添加成功', {
+							icon : 6
+						});
+					},
+					error : function(result) {
+						layer.alert('添加失败', {
+							icon : 5
+						});
+					}
+				})
+			});
+		});
+
+		//查询
+		$('#searchByid').on(
+				'click',
+				function() {
+					layer.prompt({
+						title : '学号查询'
+					}, function(val, index) {
+						layer.close(index);
+						$.ajax({
+							type : "POST",
+							datatype : "json",
+							url : "searchById",
+							data : "id=" + val,
+							contentType : "application/x-www-form-urlencoded",
+							async : false,
+							success : function(result) {
+								var r = JSON.stringify(result);
+								layer.alert("学号:" + result["id"] + " 姓名:"
+										+ result["name"] + " 性别:"
+										+ result["sex"] + " 年龄:"
+										+ result["age"], {
+									title : '查询结果'
+								});
+							},
+							error : function(result) {
+								layer.alert('查找失败', {
+									icon : 5
+								});
+							}
+						});
+					});
+				})
+	});
+
+	var TableInit = function() {
+		var oTableInit = new Object();
+		oTableInit.Init = function() {
+			$('#ArbetTable').bootstrapTable({
+				url : 'showTable',
+				method : 'post',
+				//toolbar: '#toolbar',
+				striped : true,
+				cache : false,
+				pagination : true,
+				sortable : false,
+				queryParams : oTableInit.queryParams,
+				showToggle : true,
+				sidePagination : "server",
+				pageList : [ 4, 10 ],
+				pageNumber : 1,
+				pageSize : 4,
+				showColunms : true,
+				clickToSelect : true,
+				showRefresh : true,
+				search : false,
+				uniqueId : "id",
+				contentType : "application/x-www-form-urlencoded",
+				columns : [ {
+					field : 'id',
+					title : '学号'
+				}, {
+					field : 'name',
+					title : '姓名'
+				}, {
+					field : 'sex',
+					title : '性别'
+				}, {
+					field : 'age',
+					title : '年龄'
+				}, {
+					field : 'operate',
+					title : '操作',
+					events : operateEvents,
+					formatter : operateFormatter
+				} ]
+			});
+		};
+		oTableInit.queryParams = function(params) {
+			var temp = {
+				limit : params.limit,
+				offset : params.offset
+			};
+			return temp;
+		};
+		return oTableInit;
+	};
+
+	function operateFormatter(value, row, index) {
+		return [ '<button class="btn btn-warning" id="edit">编辑</button>',
+				'<button class="btn btn-danger" id="delete">删除</button>' ]
+				.join(" ");
+	}
+	window.operateEvents = {
+		"click #delete" : function(e, value, row, index) {
+			layer.msg("确认删除?", {
+				time : 0,
+				icon : 7,
+				btn : [ "是", "否" ],
+				yes : function(index) {
+					layer.close(index);
+					$.ajax({
+						type : "POST",
+						url : "deleteStudent",
+						data : "id=" + row["id"],
+						contentType : "application/x-www-form-urlencoded",
+						async : false,
+						success : function(result) {
+							location.reload();
+						},
+						error : function(result) {
+							layer.alert('删除失败', {
+								icon : 5
+							});
+						}
+					});
+
+				}
+			});
+		},
+
+		"click #edit" : function(e, value, row, index) {
+			layer.open({
+				type : 1,
+				area : [ '600px', '360px' ],
+				shadeClose : true, //点击遮罩关闭
+				title : '修改学生记录',
+				content : $('#bidderDiv')
+			});
+
+			$("#id").val(row["id"]);
+			$("#name").val(row["name"]);
+			$("#sex").val(row["sex"]);
+			$("#age").val(row["age"]);
+
+			$("#dilivery").off("click").on("click", function() {
+				var record = {
+					oldid : row["id"],
+					id : $('#id').val(),
+					name : $('#name').val(),
+					sex : $('#sex').val(),
+					age : $('#age').val()
+				}
+				//Ajax调用处理
+				$.ajax({
+					type : "POST",
+					url : "updateStudent",
+					datatype : "text",
+					contentType : "application/json",
+					data : JSON.stringify(record),
+					async : true,
+					success : function(result) {
+						layer.alert('修改成功', {
+							icon : 6
+						});
+					},
+					error : function(result) {
+						layer.alert('修改失败', {
+							icon : 5
+						});
+					}
+				})
+			});
+		}
+	}
+</script>
+
+</head>
+<body>
+
+
+	<div id="bidderDiv" style="display: none;">
+		<table class="table table-bordered">
+			<tbody>
+				<tr>
+					<td class="text-center" colspan="2"><font color="red"
+						size="4">注意：学号不能为空！</font></td>
+				</tr>
+				<tr>
+					<td class="text-center">学号</td>
+					<td class="text-center"><input type="text" id="id" /></td>
+				</tr>
+				<tr>
+					<td class="text-center">姓名</td>
+					<td class="text-center"><input type="text" id="name" /></td>
+				</tr>
+				<tr>
+					<td class="text-center">性别</td>
+					<td class="text-center"><input type="text" id="sex" /></td>
+				</tr>
+				<tr>
+					<td class="text-center">年龄</td>
+					<td class="text-center"><input type="text" id="age" /></td>
+				</tr>
+				<tr>
+					<td class="text-center" colspan="2"><button id="dilivery"
+							class="btn btn-primary btn-block">提交</button></td>
+				</tr>
+			</tbody>
+		</table>
+
+	</div>
+
+
+
+	<div class="container">
+
+		<h1 align="center">学生管理系统</h1>
+		<div class="btn-group">
+			<button id="home" type="button" class="btn btn-default">首页</button>
+			<button id="add" type="button" class="btn btn-default">添加学生记录</button>
+			<button id="searchByid" type="button" class="btn btn-default">按学号查找</button>
+		</div>
+
+		<div id="ccT">
+			<table id="ArbetTable">
+			</table>
+		</div>
+
+	</div>
+</body>
+</html>
